@@ -1,0 +1,13 @@
+# Compiled files
+main
+*.out
+*.exe
+
+# macOS
+*.dSYM/
+
+# VS Code
+.vscode/
+
+# Output folder
+output/
