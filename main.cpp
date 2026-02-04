@@ -1,161 +1,195 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <sstream>
+#include <limits>
 using namespace std;
 
+int readInt(const string& prompt) {
+    string s;
+    int x;
+    while (true) {
+        cout << prompt;
+        getline(cin, s);
+        stringstream ss(s);
+        if (ss >> x && ss.eof()) return x;
+        cout << "Jada Masti hai? 😭, number likh\n";
+    }
+}
+
+string readName(const string& prompt) {
+    string s;
+    while (true) {
+        cout << prompt;
+        getline(cin, s);
+
+        if (s.empty()) {
+            cout << "Name cannot be empty\n";
+            continue;
+        }
+
+        bool valid = true;
+        for (char c : s) {
+            if (!isalpha(c) && c != ' ') {
+                valid = false;
+                break;
+            }
+        }
+
+        if (valid) return s;
+        cout << "tera naaam bhi number me likhta hai?🤣\n";
+    }
+}
+
+float readFloat(const string& prompt) {
+    string s;
+    float x;
+    while (true) {
+        cout << prompt;
+        getline(cin, s);
+        stringstream ss(s);
+        if (ss >> x && ss.eof()) return x;
+        cout << "Jada Masti hai? 😭, number likh\n";
+    }
+}
+
+
 class Product {
-private:
     int id;
     string name;
     int quantity;
     float price;
 
 public:
-    Product(int i, string n, int q, float p) {
-        id = i;
-        name = n;
-        quantity = q;
-        price = p;
+    Product(int i, string n, int q, float p)
+        : id(i), name(n), quantity(q), price(p) {}
+
+    int getId() const { return id; }
+    void setQuantity(int q) { quantity = q; }
+
+    void display() const {
+        cout << id << " | " << name << " | " << quantity << " | " << price << endl;
     }
 
-    int getId() {
-        return id;
+    string serialize() const {
+        return to_string(id) + "|" + name + "|" +
+               to_string(quantity) + "|" + to_string(price);
     }
 
-    void display() {
-        cout << "ID: " << id
-             << " | Name: " << name
-             << " | Qty: " << quantity
-             << " | Price: " << price << endl;
-    }
+    static bool tryDeserialize(const string& line, Product& out) {
+        try {
+            string a,b,c,d;
+            stringstream ss(line);
+            if (!getline(ss,a,'|')) return false;
+            if (!getline(ss,b,'|')) return false;
+            if (!getline(ss,c,'|')) return false;
+            if (!getline(ss,d,'|')) return false;
 
-    void updateQuantity(int q) {
-        quantity = q;
-    }
+            int id = stoi(a);
+            int qty = stoi(c);
+            float price = stof(d);
 
-    string toFileString() {
-        return to_string(id) + " " + name + " " +
-               to_string(quantity) + " " + to_string(price);
+            out = Product(id,b,qty,price);
+            return true;
+        }
+        catch (...) {
+            return false;
+        }
     }
 };
 
 vector<Product> inventory;
 
-void loadFromFile() {
-    inventory.clear();
-    ifstream file("inventory.txt");
-
-    int id, qty;
-    float price;
-    string name;
-
-    while (file >> id >> name >> qty >> price) {
-        inventory.push_back(Product(id, name, qty, price));
-    }
-
-    file.close();
+bool idExists(int id) {
+    for (auto &p : inventory)
+        if (p.getId() == id) return true;
+    return false;
 }
 
-void saveToFile() {
-    ofstream file("inventory.txt");
+void loadFile() {
+    inventory.clear();
+    ifstream f("inventory.txt");
+    string line;
 
-    for (auto &p : inventory) {
-        file << p.toFileString() << endl;
+    while (getline(f,line)) {
+        if (line.empty()) continue;
+        Product p(0,"",0,0);
+        if (Product::tryDeserialize(line,p))
+            inventory.push_back(p);
     }
+}
 
-    file.close();
+void saveFile() {
+    ofstream f("inventory.txt");
+    for (auto &p : inventory)
+        f << p.serialize() << endl;
 }
 
 void addProduct() {
-    int id, qty;
-    float price;
-    string name;
+    int id = readInt("Enter ID: ");
+    if (idExists(id)) {
+        cout << "ID is already in nasa's db\n";
+        return;
+    }
 
-    cout << "Enter Product ID: ";
-    cin >> id;
-    cout << "Enter Product Name: ";
-    cin >> name;
-    cout << "Enter Quantity: ";
-    cin >> qty;
-    cout << "Enter Price: ";
-    cin >> price;
-
-    inventory.push_back(Product(id, name, qty, price));
-    saveToFile();
-
-    cout << "Product Added Successfully!\n";
+    string name = readName("Enter Name: ");
+    int qty = readInt("Enter Quantity: ");
+    float price = readFloat("Enter Price: ");
+    inventory.push_back(Product(id,name,qty,price));
+    saveFile();
+    cout << "kar diya update\n";
 }
 
 void viewProducts() {
     if (inventory.empty()) {
-        cout << "Inventory is empty.\n";
+        cout << "Inventory empty\n";
         return;
     }
-
-    for (auto &p : inventory) {
-        p.display();
-    }
+    for (auto &p : inventory) p.display();
 }
 
 void updateProduct() {
-    int id, qty;
-    cout << "Enter Product ID to update: ";
-    cin >> id;
-
+    int id = readInt("Enter ID: ");
     for (auto &p : inventory) {
         if (p.getId() == id) {
-            cout << "Enter New Quantity: ";
-            cin >> qty;
-            p.updateQuantity(qty);
-            saveToFile();
-            cout << "Product Updated!\n";
+            int q = readInt("firse update kar raha hai 😭: ");
+            p.setQuantity(q);
+            saveFile();
+            cout << "yooooo update kar diya\n";
             return;
         }
     }
-
-    cout << "Product Not Found.\n";
+    cout << "Product nhi mila\n";
 }
 
 void deleteProduct() {
-    int id;
-    cout << "Enter Product ID to delete: ";
-    cin >> id;
-
-    for (int i = 0; i < inventory.size(); i++) {
-        if (inventory[i].getId() == id) {
-            inventory.erase(inventory.begin() + i);
-            saveToFile();
-            cout << "Product Deleted!\n";
+    int id = readInt("Enter ID: ");
+    for (int i=0;i<inventory.size();i++) {
+        if (inventory[i].getId()==id) {
+            inventory.erase(inventory.begin()+i);
+            saveFile();
+            cout << "Deleted\n";
             return;
         }
     }
-
-    cout << "Product Not Found.\n";
+    cout << "Product nhi mila\n";
 }
 
 int main() {
-    loadFromFile();
-    int choice;
+    loadFile();
 
-    do {
-        cout << "\n--- Inventory Management System ---\n";
-        cout << "1. Add Product\n";
-        cout << "2. View Products\n";
-        cout << "3. Update Product Quantity\n";
-        cout << "4. Delete Product\n";
-        cout << "5. Exit\n";
-        cout << "Enter choice: ";
-        cin >> choice;
+    while (true) {
+        cout << "\nInventory Management System\n";
+        cout << "1 Add\n2 View\n3 Update\n4 Delete\n5 Exit\n";
+        int c = readInt("Choice: ");
 
-        switch (choice) {
-            case 1: addProduct(); break;
-            case 2: viewProducts(); break;
-            case 3: updateProduct(); break;
-            case 4: deleteProduct(); break;
-            case 5: cout << "Exiting...\n"; break;
-            default: cout << "Invalid Choice!\n";
-        }
-    } while (choice != 5);
+        if (c==1) addProduct();
+        else if (c==2) viewProducts();
+        else if (c==3) updateProduct();
+        else if (c==4) deleteProduct();
+        else if (c==5) break;
+        else cout << "Invalid choice\n";
+    }
 
     return 0;
 }
